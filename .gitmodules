@@ -1,0 +1,3 @@
+[submodule "cwds"]
+	path = cwds
+	url = https://github.com/CarloWood/cwds.git

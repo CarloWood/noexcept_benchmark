@@ -42,7 +42,7 @@ namespace
     }
   };
 
-  
+
   unsigned object_class::m_object_counter;
 
 

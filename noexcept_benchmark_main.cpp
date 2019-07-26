@@ -44,7 +44,6 @@ namespace
     double duration_implicit;
   };
 
-  
   double divide_by_positive(const double x, const double y)
   {
     return x /
@@ -73,7 +72,7 @@ namespace
       :
       m_test_case_name{ test_case_name }
     {
-      std::cout 
+      std::cout
         << "\n"
         << "["
 #ifdef _MSC_VER
@@ -180,7 +179,6 @@ namespace
     durations.duration_implicit = profile_func_call(func2);
     return durations;
   }
-    
 
   template <unsigned N>
   void update_test_result_and_print_durations(

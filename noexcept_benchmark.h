@@ -105,7 +105,7 @@ namespace noexcept_benchmark
   double profile_func_call(T func)
   {
     using namespace std::chrono;
-    
+
     const auto time_point1 = high_resolution_clock::now();
     func();
     const auto time_point2 = high_resolution_clock::now();
