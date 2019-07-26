@@ -27,7 +27,7 @@ message(STATUS "[${PROJECT_NAME}] CMAKE_VERSION = ${CMAKE_VERSION}")
 message(STATUS "[${PROJECT_NAME}] CMAKE_GENERATOR = ${CMAKE_GENERATOR}")
 
 if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 11)
+  set(CMAKE_CXX_STANDARD 14)
 endif()
 
 if(CMAKE_CONFIGURATION_TYPES)
@@ -48,6 +48,8 @@ endif()
 
 file(GLOB SHARED_LIB_SOURCE_FILES lib/*.cpp lib/*.h)
 
+find_package(Threads)
+
 add_library(noexcept_lib
   SHARED ${SHARED_LIB_SOURCE_FILES})
 target_compile_definitions(noexcept_lib PRIVATE
@@ -66,7 +68,8 @@ target_include_directories(implicit_lib PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_executable(${PROJECT_NAME}
   ${PROJECT_NAME}.h
-  ${PROJECT_NAME}_main.cpp)
+  ${PROJECT_NAME}_main.cpp
+  cwds/benchmark.cxx)
 target_compile_definitions(${PROJECT_NAME} PRIVATE
   ${NOEXCEPT_BENCHMARK_THROW_EXCEPTION_COMPILE_DEFINITION}
 )
@@ -74,4 +77,5 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 target_link_libraries(${PROJECT_NAME}
   noexcept_lib
   implicit_lib
+  ${CMAKE_THREAD_LIBS_INIT}
 )

@@ -17,6 +17,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "cwds/benchmark.h"
 #include <cassert>
 #include <chrono>
 #include <ctime>
@@ -49,21 +50,21 @@ limitations under the License.
 #    define NOEXCEPT_BENCHMARK_NUMBER_OF_INLINE_FUNC_CALLS 2147483647 // INT32_MAX (about two billion)
 #  endif
 #  ifndef NOEXCEPT_BENCHMARK_NUMBER_OF_EXPORTED_FUNC_CALLS
-#    define NOEXCEPT_BENCHMARK_NUMBER_OF_EXPORTED_FUNC_CALLS 200000000 // two hundred million
+#    define NOEXCEPT_BENCHMARK_NUMBER_OF_EXPORTED_FUNC_CALLS 10 // two hundred million
 #  endif
 #  ifndef NOEXCEPT_BENCHMARK_NUMBER_OF_CATCHING_RECURSIVE_FUNC_CALLS
-#    define NOEXCEPT_BENCHMARK_NUMBER_OF_CATCHING_RECURSIVE_FUNC_CALLS 10000 // ten thousand
+#    define NOEXCEPT_BENCHMARK_NUMBER_OF_CATCHING_RECURSIVE_FUNC_CALLS 10 // ten thousand
 #endif
 #  ifndef NOEXCEPT_BENCHMARK_INC_AND_DEC_FUNC_CALLS
-#    define NOEXCEPT_BENCHMARK_INC_AND_DEC_FUNC_CALLS 2147483647 // INT32_MAX (about two billion)
+#    define NOEXCEPT_BENCHMARK_INC_AND_DEC_FUNC_CALLS 10 // INT32_MAX (about two billion)
 #  endif
 #  ifndef NOEXCEPT_BENCHMARK_STACK_UNWINDING_FUNC_CALLS
 // Note: On Windows 10, x64, stack overflow occurred with N = 15000
-#    define NOEXCEPT_BENCHMARK_STACK_UNWINDING_FUNC_CALLS 10000 // ten thousand
+#    define NOEXCEPT_BENCHMARK_STACK_UNWINDING_FUNC_CALLS 10 // ten thousand
 #  endif
 #  ifndef NOEXCEPT_BENCHMARK_STACK_UNWINDING_OBJECTS
 // Note: On Windows 10, x64, stack overflow occurred with N = 1280000
-#    define NOEXCEPT_BENCHMARK_STACK_UNWINDING_OBJECTS 1000000 // a million
+#    define NOEXCEPT_BENCHMARK_STACK_UNWINDING_OBJECTS 10 // a million
 #  endif
 #  ifndef NOEXCEPT_BENCHMARK_INITIAL_VECTOR_SIZE
 #    define NOEXCEPT_BENCHMARK_INITIAL_VECTOR_SIZE 10000000 // ten million
@@ -78,9 +79,16 @@ limitations under the License.
 #  define NOEXCEPT_BENCHMARK_INITIAL_VECTOR_SIZE 42
 #endif
 
+extern benchmark::Stopwatch stopwatch;
 
 namespace noexcept_benchmark
 {
+  constexpr double cpu_frequency = 3612059050.0;        // In cycles per second.
+  constexpr int cpu = 0;                                // The CPU to run on.
+  constexpr size_t loopsize = 1000;                     // We'll be measuring the number of clock cylces needed for this many iterations of the test code.
+  constexpr size_t minimum_of = 3;                      // All but the fastest measurement of this many measurements are thrown away (3 is normally enough).
+  constexpr int nk = 3;                                 // The number of buckets of FrequencyCounter (with the highest counts) that are averaged over.
+
   inline void throw_exception_if(const bool do_throw_exception)
   {
     if (do_throw_exception)
@@ -104,15 +112,26 @@ namespace noexcept_benchmark
   template <typename T>
   double profile_func_call(T func)
   {
-    using namespace std::chrono;
+    // The lambda is marked mutable because of the asm() that claims to change m,
+    // however - you should not *really* change the input variables!
+    // The [m = m] is needed because our m is const and doing just [m] weirdly
+    // enough makes the type of the captured m also const, despite the mutable.
+    auto result = stopwatch.measure<nk>(loopsize, [/*m = m*/func]() mutable {
+        //IACA_START                      // Optional; needed when you want to analyse the generated assembly code with IACA
+                                          // (https://software.intel.com/en-us/articles/intel-architecture-code-analyzer).
+//      asm volatile ("" : "+r" (m));     // See https://stackoverflow.com/a/54245040/1487069 for an explanation and discussion.
+        asm volatile ("");
 
-    const auto time_point1 = high_resolution_clock::now();
-    func();
-    const auto time_point2 = high_resolution_clock::now();
+        // Code under test.
+        func();
 
-    return duration_cast<duration<double>>(time_point2 - time_point1).count();
+        asm volatile ("");
+//      asm volatile ("" :: "r" (lsb));   // Same.
+        //IACA_END                        // Optional; needed when you want to analyse the generated assembly code with IACA.
+    }, minimum_of);
+
+    return (result / cpu_frequency * 1e9 / loopsize);
   }
-
 }
 
 #define NOEXCEPT_BENCHMARK_EXCEPTION_SPECIFIER noexcept

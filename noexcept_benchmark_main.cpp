@@ -27,8 +27,6 @@ limitations under the License.
 
 using namespace noexcept_benchmark;
 
-
-
 namespace
 {
   const int number_of_iterations = NOEXCEPT_BENCHMARK_NUMBER_OF_ITERATIONS;
@@ -106,7 +104,7 @@ namespace
         << "implicit"
         << std::string(output_precision + 3 - sizeof("implicit"), ' ')
         << column_gap
-        << "(durations in seconds)"
+        << "(durations in nanoseconds)"
         << std::flush;
     }
 
@@ -199,8 +197,13 @@ namespace
 
 }
 
+benchmark::Stopwatch stopwatch(cpu);          // Declare stopwatch and configure on which CPU it must run.
+
 int main()
 {
+  // Calibrate Stopwatch overhead.
+  stopwatch.calibrate_overhead(loopsize, minimum_of);
+
   std::cout
     << std::fixed
     << std::setprecision(output_precision)
@@ -327,6 +330,11 @@ int main()
       update_test_result_and_print_durations(result, durations);
     }
   }
+
+  if (0) // test_vector_reserve() is too slow for cwds/benchmark.h; it is probably always
+         // interrupted by the schedular, and therefore benchmark can't get an accurate
+         // measurement-- in an attempt to get that anyway it keeps doing measurements
+         // (trying to reach a 99.99% certainty) which takes forever.
   {
     test_result<NOEXCEPT_BENCHMARK_INITIAL_VECTOR_SIZE> result(
       "std::vector<my_string> reserve");
